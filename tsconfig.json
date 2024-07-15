@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "strict": true,
+    "sourceMap": true,
+    "moduleResolution": "node",
+    "forceConsistentCasingInFileNames": true,
+    "lib": [
+      "DOM",
+      "ES2020"
+    ],
+    "outDir": "./build",
+    "jsx": "react-jsx",
+    "jsxImportSource": "@emotion/react"
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "**/*.test.*"
+  ],
+}

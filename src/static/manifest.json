@@ -1,0 +1,28 @@
+{
+	"manifest_version": 3,
+	"name": "Volume Control",
+	"description": "Volume Control",
+	"version": "1.0",
+	"action": {
+		"default_popup": "popup.html",
+		"default_icon": {
+			"256": "icon256.png"
+		}
+	},
+	"content_scripts": [
+		{
+			"matches": ["<all_urls>"],
+			"js": ["contentScript.js"]
+		}
+	],
+	"permissions": ["tabs", "tabCapture", "offscreen", "favicon"],
+	"web_accessible_resources": [
+		{
+			"resources": ["offscreen.html"],
+			"matches": ["<all_urls>"]
+		}
+	],
+	"background": {
+		"service_worker": "serviceWorker.js"
+	}
+}

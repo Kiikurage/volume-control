@@ -1,0 +1,17 @@
+{
+	"overrides": [
+		{
+			"include": ["./src/types/*"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"useNamespaceKeyword": "off"
+					},
+					"complexity": {
+						"noBannedTypes": "off"
+					}
+				}
+			}
+		}
+	]
+}
