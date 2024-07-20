@@ -6,7 +6,6 @@ module.exports = {
 	cache: true,
 	mode: process.env.NODE_ENV === "production" ? "production" : "development",
 	entry: {
-		offscreen: path.resolve(__dirname, "./src/offscreen.ts"),
 		popup: path.resolve(__dirname, "./src/popup.tsx"),
 		serviceWorker: path.resolve(__dirname, "./src/serviceWorker.ts"),
 		contentScript: path.resolve(__dirname, "./src/contentScript.ts"),

@@ -9,7 +9,7 @@ const rootListener = (
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	const listener = listeners.get((message as any).type);
 	if (listener === undefined) return;
-	const response = listener(message) as unknown;
+	const response = listener(message, sender) as unknown;
 	if (response instanceof Promise) {
 		response.then(sendResponse);
 		return true;
@@ -18,17 +18,7 @@ const rootListener = (
 	sendResponse(response);
 };
 
-function defineMessage<Request, Response>(
-	type: string,
-): {
-	send: (request: Request) => Promise<Response>;
-	addListener(
-		listener: (request: Request) => Response | Promise<Response>,
-	): void;
-	removeListener(
-		listener: (request: Request) => Response | Promise<Response>,
-	): void;
-} {
+function defineMessage<Request, Response>(type: string) {
 	const send = (request: Request) => {
 		return chrome.runtime.sendMessage<Request, Response>(undefined, {
 			type,
@@ -36,8 +26,18 @@ function defineMessage<Request, Response>(
 		});
 	};
 
+	const sendToTab = (tabId: number, request: Request) => {
+		return chrome.tabs.sendMessage<Request, Response>(tabId, {
+			type,
+			...request,
+		});
+	};
+
 	const addListener = (
-		listener: (request: Request) => Response | Promise<Response>,
+		listener: (
+			request: Request,
+			sender: chrome.runtime.MessageSender,
+		) => Response | Promise<Response>,
 	) => {
 		if (listeners.size === 0) {
 			chrome.runtime.onMessage.addListener(rootListener);
@@ -46,7 +46,10 @@ function defineMessage<Request, Response>(
 	};
 
 	const removeListener = (
-		listener: (request: Request) => Response | Promise<Response>,
+		listener: (
+			request: Request,
+			sender: chrome.runtime.MessageSender,
+		) => Response | Promise<Response>,
 	) => {
 		if (listeners.get(type) !== listener) return;
 
@@ -58,73 +61,20 @@ function defineMessage<Request, Response>(
 
 	return {
 		send,
+		sendToTab,
 		addListener,
 		removeListener,
 	};
 }
 
-export interface Tab {
-	tabId: number;
-	title: string;
-	url: string;
-	audible: boolean;
-}
-
-export interface Item {
-	tabId: number;
-	title: string;
-	url: string;
-	audible: boolean;
-	active: boolean;
-	volume: number;
-}
-
-const OriginalStartCapture = defineMessage<
-	{ tabId: number; streamId: string },
-	void
->("startCapture");
-
 export const SetVolume = defineMessage<{ tabId: number; volume: number }, void>(
 	"setVolume",
 );
 
-export const StartCapture = {
-	send: async (tabId: number) => {
-		const streamId = await chrome.tabCapture.getMediaStreamId({
-			targetTabId: tabId,
-		});
+export const SetGain = defineMessage<{ volume: number }, void>("setGain");
 
-		return OriginalStartCapture.send({ tabId, streamId });
-	},
-	addListener: OriginalStartCapture.addListener,
-};
+export const GetVolume = defineMessage<void, number>("getVolume");
 
-export const OnTabCreate = defineMessage<Tab, void>("onTabCreate");
-
-export const OnTabUpdate = defineMessage<Tab, void>("onTabUpdate");
-
-export const OnTabActivate = defineMessage<{ tabId: number }, void>(
-	"onTabActivate",
-);
-
-export const OnTabDelete = defineMessage<{ tabId: number }, void>(
-	"onTabDelete",
-);
-
-export const GetTabs = defineMessage<
-	void,
-	{
-		tabs: Tab[];
-		activeTabIds: number[];
-	}
->("getTabs");
-
-export const GetItemList = defineMessage<void, Item[]>("getItemList");
-
-export const OnItemCreate = defineMessage<Item, void>("onItemCreate");
-
-export const OnItemUpdate = defineMessage<Item, void>("onItemUpdate");
-
-export const OnItemDelete = defineMessage<{ tabId: number }, void>(
-	"onItemDelete",
+export const GetVolumeAll = defineMessage<void, Record<number, number>>(
+	"getVolumeAll",
 );

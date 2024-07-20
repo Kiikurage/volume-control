@@ -1,7 +1,3 @@
-# Multi Stream Viewer
+# Volume Control
 
-複数の動画サイトの動画の同時視聴(複窓)を手助けするツール
-
-- TwitchやYoutubeの動画を1画面に複数配置するツールはある
-- ただ、ニコニコ対応してるものがあんまない
-- カスタマイズしたいところに手が届かない
+Per-Tab Volume Control Extension for Google Chrome

@@ -15,13 +15,7 @@
 			"js": ["contentScript.js"]
 		}
 	],
-	"permissions": ["tabs", "tabCapture", "offscreen", "favicon"],
-	"web_accessible_resources": [
-		{
-			"resources": ["offscreen.html"],
-			"matches": ["<all_urls>"]
-		}
-	],
+	"permissions": ["tabs", "favicon"],
 	"background": {
 		"service_worker": "serviceWorker.js"
 	}

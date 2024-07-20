@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import {
-	GetItemList,
-	type Item,
-	OnItemCreate,
-	OnItemDelete,
-	OnItemUpdate,
-	SetVolume,
-	StartCapture,
-} from "./message";
+import { GetVolumeAll, SetVolume } from "./message";
+
+export interface Item {
+	tabId: number;
+	title: string;
+	url: string;
+	audible: boolean;
+	active: boolean;
+	volume: number;
+}
 
 const App = () => {
 	const { items, setVolume } = useItems();
@@ -25,9 +26,6 @@ const App = () => {
 					key={item.tabId}
 					item={item}
 					onVolumeChange={(volume) => setVolume(item.tabId, volume)}
-					onActivateTab={async () => {
-						chrome.tabs.update(item.tabId, { active: true });
-					}}
 				/>
 			))}
 		</div>
@@ -37,15 +35,16 @@ const App = () => {
 const Control = ({
 	item,
 	onVolumeChange,
-	onActivateTab,
 }: {
 	item: Item;
 	onVolumeChange: (volume: number) => void;
-	onActivateTab: () => void;
 }) => {
 	const hostname = new URL(item.url).host;
 	const tld = hostname.split(".").slice(-2).join(".");
-	const disabled = !item.active && item.volume === -1;
+	const [palette, setPalette] = useState<[string, string]>(() => [
+		"#f8f8f8",
+		"#383838",
+	]);
 
 	return (
 		<div
@@ -62,9 +61,12 @@ const Control = ({
 				"&+&": {
 					borderTop: "1px solid #e0e0e0",
 				},
+				background: palette[0],
+				color: palette[1],
 			}}
 		>
 			<img
+				// onLoad={(ev) => setPalette(computePalette(ev.currentTarget))}
 				css={{ gridArea: "favicon" }}
 				src={getFaviconUrl(item.url)}
 				alt="favicon"
@@ -101,171 +103,137 @@ const Control = ({
 			<span
 				css={{
 					gridArea: "volume",
-					fontSize: item.volume === -1 ? "1em" : "1.5em",
-					color: item.volume === -1 ? "#a0a0a0" : "#4b8825",
-					fontWeight: item.volume === -1 ? "normal" : "bold",
+					fontSize: "1.5em",
+					fontWeight: "bold",
 				}}
 			>
-				{item.volume !== -1 ? `${item.volume.toFixed(1)}%` : "無調整"}
+				{item.volume.toFixed(1)}%
 			</span>
 
-			{disabled ? (
-				<button
-					type="button"
-					onClick={onActivateTab}
-					css={{
-						gridArea: "slider",
-						border: "none",
-						background: "none",
-						cursor: "pointer",
-						height: "30px",
-						borderRadius: "4px",
-						display: "inline-block",
-						width: "min-content",
-						padding: "0 8px",
-						marginLeft: "-8px",
-						alignItems: "center",
-						justifyContent: "center",
-						"&:hover": {
-							background: "rgba(0,0,0,0.05)",
-						},
-						"&:active": {
-							background: "rgba(0,0,0,0.15)",
-						},
-					}}
-				>
-					タブを開いて音量調整を開始
-				</button>
-			) : (
-				<input
-					type="range"
-					min={0}
-					max={600}
-					css={{
-						"--color": "#282828",
-						gridArea: "slider",
-						display: "block",
-						margin: 0,
-						padding: "8px 0",
+			<input
+				type="range"
+				min={0}
+				max={200}
+				css={{
+					"--color": palette[1],
+					background: "transparent",
+					gridArea: "slider",
+					display: "block",
+					margin: 0,
+					padding: "8px 0",
+					appearance: "none",
+					outline: "none",
+					"&::-webkit-slider-runnable-track": {
+						"--percentage": `${((item.volume === -1 ? 100 : item.volume) / 200) * 100}%`,
 						appearance: "none",
-						outline: "none",
+						height: 2,
+						background:
+							"linear-gradient(to right, var(--color) var(--percentage), color-mix(in srgb, var(--color) 25%, transparent) var(--percentage))",
+					},
+					"&::-webkit-slider-thumb": {
+						appearance: "none",
+						width: 16,
+						height: 16,
+						marginTop: -7,
+						borderRadius: "50%",
+						background: "var(--color)",
+						outline:
+							"0 solid color-mix(in srgb, var(--color) 15%, transparent)",
+						transition: "outline-width 0.1s",
+					},
+					"&:disabled": {
+						cursor: "not-allowed",
 						"&::-webkit-slider-runnable-track": {
-							"--percentage": `${((item.volume === -1 ? 100 : item.volume) / 600) * 100}%`,
-							appearance: "none",
-							height: 2,
-							background:
-								"linear-gradient(to right, var(--color) var(--percentage), color-mix(in srgb, var(--color) 25%, transparent) var(--percentage))",
+							background: "color-mix(in srgb, var(--color) 30%, #fff)",
 						},
 						"&::-webkit-slider-thumb": {
-							appearance: "none",
-							width: 16,
-							height: 16,
-							marginTop: -7,
-							borderRadius: "50%",
-							background: "var(--color)",
-							outline:
-								"0 solid color-mix(in srgb, var(--color) 15%, transparent)",
-							transition: "outline-width 0.1s",
+							outline: "none",
+							background: "color-mix(in srgb, var(--color) 30%, #fff)",
 						},
-						"&:disabled": {
-							cursor: "not-allowed",
-							"&::-webkit-slider-runnable-track": {
-								background: "color-mix(in srgb, var(--color) 30%, #fff)",
-							},
-							"&::-webkit-slider-thumb": {
-								outline: "none",
-								background: "color-mix(in srgb, var(--color) 30%, #fff)",
+					},
+					"&:hover, &:focus-visible": {
+						"&::-webkit-slider-thumb": {
+							outlineWidth: "8px",
+							"&:active": {
+								outlineColor:
+									"color-mix(in srgb, var(--color) 30%, transparent)",
 							},
 						},
-						"&:hover, &:focus-visible": {
-							"&::-webkit-slider-thumb": {
-								outlineWidth: "8px",
-								"&:active": {
-									outlineColor:
-										"color-mix(in srgb, var(--color) 30%, transparent)",
-								},
-							},
-						},
-					}}
-					value={item.volume === -1 ? 100 : item.volume}
-					onChange={(e) => {
-						onVolumeChange(Number(e.target.value));
-					}}
-				/>
-			)}
+					},
+				}}
+				value={item.volume === -1 ? 100 : item.volume}
+				onChange={(e) => {
+					onVolumeChange(Number(e.target.value));
+				}}
+			/>
 		</div>
 	);
 };
 
-function useItems() {
-	const [items, setItems] = useState<Item[]>([]);
+function useVolumes() {
+	const [volumes, setVolumes] = useState<Record<number, number>>({});
 
 	useEffect(() => {
-		GetItemList.send().then((items) => {
-			if (items === undefined) return;
-			setItems(items);
+		GetVolumeAll.send().then((volumes) => {
+			setVolumes(volumes);
 		});
 	}, []);
 
-	useEffect(() => {
-		const callback = (item: Item) => {
-			setItems((items) => {
-				return [...items, item];
-			});
-		};
-
-		OnItemCreate.addListener(callback);
-		return () => OnItemCreate.removeListener(callback);
+	const setVolume = useCallback(async (tabId: number, volume: number) => {
+		SetVolume.send({ tabId, volume });
+		setVolumes((volumes) => {
+			return { ...volumes, [tabId]: volume };
+		});
 	}, []);
 
-	useEffect(() => {
-		const callback = (item: Item) => {
-			setItems((items) => {
-				return items.map((i) => (i.tabId === item.tabId ? item : i));
-			});
-		};
+	return { volumes, setVolume };
+}
 
-		OnItemUpdate.addListener(callback);
-		return () => OnItemUpdate.removeListener(callback);
-	}, []);
+function useItems() {
+	const { volumes, setVolume } = useVolumes();
+	const [tabs, setTabs] = useState<chrome.tabs.Tab[]>(() => []);
 
 	useEffect(() => {
-		const callback = ({ tabId }: { tabId: number }) => {
-			setItems((items) => {
-				return items.filter((i) => i.tabId !== tabId);
-			});
-		};
+		(async () => {
+			const tabs = await chrome.tabs.query({});
+			setTabs(tabs);
+		})();
 
-		OnItemDelete.addListener(callback);
-		return () => OnItemDelete.removeListener(callback);
+		const callback = () => {
+			(async () => {
+				const tabs = await chrome.tabs.query({});
+				setTabs(tabs);
+			})();
+		};
+		chrome.tabs.onCreated.addListener(callback);
+		chrome.tabs.onUpdated.addListener(callback);
+		chrome.tabs.onRemoved.addListener(callback);
+		return () => {
+			chrome.tabs.onCreated.removeListener(callback);
+			chrome.tabs.onUpdated.removeListener(callback);
+			chrome.tabs.onRemoved.removeListener(callback);
+		};
 	}, []);
 
-	const setVolume = useCallback(
-		async (tabId: number, volume: number) => {
-			const item = items.find((i) => i.tabId === tabId);
-			if (item === undefined) {
-				return;
-			}
+	const items = useMemo(() => {
+		return tabs
+			.filter((tab) => (tab.url ?? "").startsWith("http"))
+			.filter((tab) => tab.audible || tab.active)
+			.map((tab) => {
+				const volume = volumes[tab.id] ?? 100;
 
-			if (item.volume === -1) {
-				await StartCapture.send(item.tabId);
-			}
-
-			SetVolume.send({ tabId: item.tabId, volume });
-			setItems((items) => {
-				return items.map((i) => (i.tabId === tabId ? { ...i, volume } : i));
+				return {
+					tabId: tab.id ?? -1,
+					title: tab.title ?? "",
+					url: tab.url ?? "",
+					audible: tab.audible ?? false,
+					active: tab.active ?? false,
+					volume,
+				};
 			});
-		},
-		[items],
-	);
+	}, [tabs, volumes]);
 
-	const filteredItems = useMemo(() => {
-		return items
-			.filter((item) => item.url.startsWith("http"))
-			.filter((item) => item.audible || item.volume !== -1 || item.active);
-	}, [items]);
-
-	return { items: filteredItems, setVolume };
+	return { items, setVolume };
 }
 
 window.addEventListener("DOMContentLoaded", () => {

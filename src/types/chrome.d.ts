@@ -106,6 +106,7 @@ declare module chrome {
 		// https://developer.chrome.com/docs/extensions/reference/api/tabs#type-Tab
 		interface Tab {
 			id: number;
+			active?: boolean;
 			title?: string;
 			url?: string;
 			pendingUrl?: string;
@@ -130,7 +131,7 @@ declare module chrome {
 		function get(tabId: number): Promise<Tab>;
 
 		// https://developer.chrome.com/docs/extensions/reference/api/tabs#method-sendMessage
-		function sendMessage<Request extends { type: string }, Response = unknown>(
+		function sendMessage<Request, Response = unknown>(
 			tabId: number,
 			message: Request,
 			options?: undefined,
